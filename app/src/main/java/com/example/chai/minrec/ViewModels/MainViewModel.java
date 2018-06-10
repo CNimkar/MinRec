@@ -10,89 +10,52 @@ import android.os.SystemClock;
 import android.support.annotation.NonNull;
 import android.util.Log;
 
+import com.example.chai.minrec.Managers.MediaManagerImpl;
+import com.example.chai.minrec.Managers.RecordManagerImpl;
+
 import java.io.IOException;
 
 public class MainViewModel extends AndroidViewModel {
 
-
+    private String mFileName;
     private boolean recording;
     private boolean playing;
     public MutableLiveData<Boolean> recordingLive = new MutableLiveData<>();
     public MutableLiveData<Boolean> playingLive = new MutableLiveData<>();
     private static final String TAG = "Recording";
-    private MediaRecorder mediaRecorder = new MediaRecorder();
     private MediaPlayer mediaPlayer = new MediaPlayer();
-    private String mFileName;
     private Handler handler = new Handler();
     private long startTime = 0;
+    private RecordManagerImpl recordManager;
+    private MediaManagerImpl mediaManager;
 
 
     public MainViewModel(@NonNull Application application) {
         super(application);
-
+        recordManager = RecordManagerImpl.getInstance(application);
+        mediaManager = MediaManagerImpl.getInstance();
     }
 
 
     public void setup() {
-        mFileName = getApplication().getExternalCacheDir().getAbsolutePath();
-        mFileName += "/audiorecordtest.3gp";
-
-
+        mFileName = recordManager.fileName("/test_file.3gp");
     }
 
     public void record() {
-        mediaRecorder = new MediaRecorder();
-        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mediaRecorder.setOutputFile(mFileName);
-        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-
-        try {
-            mediaRecorder.prepare();
-        } catch (IOException e) {
-            Log.e(TAG, "prepare() failed");
-        }
-
-        mediaRecorder.start();
-
-        Log.i(TAG, "Started recording at" + mFileName);
-
+        recordManager.record(mFileName);
     }
 
     public void stop() {
-        mediaRecorder.stop();
-        mediaRecorder.release();
-        mediaRecorder = null;
-
-
-        Log.i(TAG, "Stopped recording at" + mFileName);
+        recordManager.stop();
     }
 
     public void startPlaying() {
-        try {
-            mediaPlayer = new MediaPlayer();
-            mediaPlayer.setDataSource(mFileName);
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-
-            startTime = SystemClock.elapsedRealtime();
-            handler.postDelayed(clockWorkRunnable, 0);
-
-
-        } catch (IOException e) {
-            Log.e(TAG, "prepare() failed");
-        }
-
-        Log.i(TAG, "start playing");
+        mediaManager.startPlaying(mFileName);
     }
 
 
     public void stopPlaying() {
-        mediaPlayer.stop();
-        mediaPlayer.release();
-        mediaPlayer = null;
-        handler.removeCallbacks(clockWorkRunnable);
-        Log.i(TAG, "Stop playing! ");
+        mediaManager.stopPlaying();
     }
 
     public void clockWork() {
@@ -106,15 +69,8 @@ public class MainViewModel extends AndroidViewModel {
     Runnable clockWorkRunnable = () -> clockWork();
 
     public void checkBeforeStop() {
-        if (mediaRecorder != null) {
-            mediaRecorder.release();
-            mediaRecorder = null;
-        }
+        recordManager.recorderCleanup();
 
-        if (mediaPlayer != null) {
-            mediaPlayer.release();
-            mediaPlayer = null;
-        }
     }
 
     public void playDecision() {
