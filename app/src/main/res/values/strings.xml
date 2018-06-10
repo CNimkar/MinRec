@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">MinRec</string>
+    <string name="title_home">Recordings</string>
+    <string name="title_dashboard">Record</string>
+</resources>
